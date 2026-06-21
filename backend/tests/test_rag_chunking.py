@@ -16,11 +16,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 _fake = types.ModuleType("chromadb")
 _utils = types.ModuleType("chromadb.utils")
 _ef = types.ModuleType("chromadb.utils.embedding_functions")
+_cfg = types.ModuleType("chromadb.config")
+_cfg.Settings = lambda **kw: None
 _utils.embedding_functions = _ef
 _fake.utils = _utils
+_fake.config = _cfg
 sys.modules.setdefault("chromadb", _fake)
 sys.modules.setdefault("chromadb.utils", _utils)
 sys.modules.setdefault("chromadb.utils.embedding_functions", _ef)
+sys.modules.setdefault("chromadb.config", _cfg)
 
 import rag  # noqa: E402
 

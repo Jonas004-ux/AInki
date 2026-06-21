@@ -7,6 +7,7 @@ venv/
 # Data (local only)
 data/ainki.db
 data/chroma/
+data/config.json
 
 # Node
 frontend/node_modules/

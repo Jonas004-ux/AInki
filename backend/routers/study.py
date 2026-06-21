@@ -122,10 +122,11 @@ def end_session(payload: EndSessionRequest, db: Session = Depends(get_db)):
 
     topic_stats = []
     for tag, cards in tag_to_cards.items():
-        regenerate_topic_file(tag, cards)
         total, acc = topic_accuracy(tag)
-        if total > 0:
-            topic_stats.append((tag, total, acc))
+        if total == 0:
+            continue  # never answered in AI mode — don't write a topic file
+        regenerate_topic_file(tag, cards)
+        topic_stats.append((tag, total, acc))
 
     # Weakest first (lowest accuracy)
     topic_stats.sort(key=lambda t: t[2])

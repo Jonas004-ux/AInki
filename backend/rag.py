@@ -9,11 +9,17 @@ source file + page so the chatbot can cite where an answer came from.
 Embeddings: sentence-transformers `all-MiniLM-L6-v2` (local, no API key, 384-dim),
 wired into ChromaDB's persistent client at data/chroma/.
 """
+import logging
 import re
 from pathlib import Path
 from typing import Optional
 
+# ChromaDB 0.5.x ships a posthog telemetry shim that spams harmless errors on
+# every call ("capture() takes 1 positional argument..."). Silence it.
+logging.getLogger("chromadb.telemetry").setLevel(logging.CRITICAL)
+
 import chromadb
+from chromadb.config import Settings
 from chromadb.utils import embedding_functions
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -50,7 +56,10 @@ def _get_client():
     global _client
     if _client is None:
         CHROMA_DIR.mkdir(parents=True, exist_ok=True)
-        _client = chromadb.PersistentClient(path=str(CHROMA_DIR))
+        _client = chromadb.PersistentClient(
+            path=str(CHROMA_DIR),
+            settings=Settings(anonymized_telemetry=False),
+        )
     return _client
 
 
