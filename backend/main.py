@@ -1,6 +1,11 @@
 import json
 from pathlib import Path
 from datetime import datetime, timezone
+
+# Load backend/.env (e.g. ANTHROPIC_API_KEY) before anything reads os.environ.
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, SessionLocal

@@ -1,7 +1,9 @@
 """
 Endpoints for both Classic mode (SM-2 rating) and AI Answer Mode (evaluate + rate).
 """
+import json
 import os
+import re
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -18,6 +20,36 @@ from second_brain import (
 )
 
 router = APIRouter(prefix="/study", tags=["study"])
+
+
+def _parse_verdict_json(text: str) -> dict:
+    """Parse the evaluator's JSON, tolerating ```json fences or surrounding prose.
+    Falls back to extracting the first {...} block. Coerces/validates fields so a
+    malformed response never 500s the study flow."""
+    raw = text.strip()
+    # Strip a leading/trailing markdown code fence if present.
+    fence = re.match(r"^```(?:json)?\s*(.*?)\s*```$", raw, re.DOTALL)
+    if fence:
+        raw = fence.group(1).strip()
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", raw, re.DOTALL)
+        if not match:
+            raise HTTPException(status_code=502, detail="AI evaluator returned no JSON")
+        data = json.loads(match.group(0))
+
+    rating = int(data.get("rating", 0))
+    rating = max(0, min(3, rating))
+    verdict = data.get("verdict", "incorrect")
+    if verdict not in ("correct", "partial", "incorrect"):
+        verdict = "correct" if rating >= 2 else "incorrect"
+    return {
+        "verdict": verdict,
+        "rating": rating,
+        "feedback": str(data.get("feedback", "")).strip(),
+        "ai_notes": str(data.get("ai_notes", "none")).strip(),
+    }
 
 
 class RateRequest(BaseModel):
@@ -87,8 +119,7 @@ Rating guide: 3=Easy (perfect), 2=Good (correct with minor gaps), 1=Hard (partia
         messages=[{"role": "user", "content": prompt}],
     )
 
-    import json
-    result = json.loads(message.content[0].text)
+    result = _parse_verdict_json(message.content[0].text)
 
     # Apply SM-2 and write to Second Brain
     apply_sm2(card, result["rating"])
