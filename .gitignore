@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.env
+
+# Data (local only)
+data/ainki.db
+data/chroma/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Second brain (personal, not committed)
+second_brain/
+
+# OS
+.DS_Store
