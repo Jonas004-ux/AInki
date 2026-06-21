@@ -64,6 +64,21 @@ Each answer appends one line to a per-topic JSONL log (`topics/{slug}.jsonl`), a
 human-readable `topics/{slug}.md` + `overview.md` are regenerated in a single batch at
 session end (`/study/end-session`). Card files are small (one per card) and rewritten in place.
 
-## RAG / Chatbot (coming soon)
+## First-run setup
 
-Set your lecture materials path in `data/config.json`. The app will index them with ChromaDB + sentence-transformers for RAG-backed Q&A.
+On first launch the app asks for the folder containing your lecture materials. The
+path is saved to `data/config.json` and indexing starts immediately (you can also
+re-index later via `POST /config/reindex`). A sample deck is seeded so the UI isn't empty.
+
+## RAG / Chatbot
+
+The chatbot ("Ask AI" sidebar) answers questions grounded in your own lecture material.
+
+**Pipeline** ([`rag.py`](backend/rag.py)):
+1. **Extract** — PDFs via **PyMuPDF** (page-aware), plus `.txt` / `.md`. Each chunk keeps its source file and page so answers can cite where they came from.
+2. **Chunk** — paragraphs greedily packed into ~900-char chunks with 150-char overlap; oversized paragraphs are sentence/hard-split. No chunk ever exceeds the limit (unit-tested).
+3. **Embed** — `all-MiniLM-L6-v2` via sentence-transformers (local, no API key).
+4. **Store** — ChromaDB persistent client at `data/chroma/`.
+5. **Retrieve + answer** — top-k chunks are fed to Claude (`claude-sonnet-4-6`), which answers and cites the excerpts used.
+
+Chunking has its own unit tests (`pytest tests/test_rag_chunking.py`) — the key invariant is that no chunk overflows the embedding window, since that silently degrades retrieval.

@@ -35,4 +35,15 @@ export const api = {
     request("/study/ai-answer", { method: "POST", body: JSON.stringify({ card_id: cardId, user_answer: userAnswer }) }),
   endSession: (answered, correct) =>
     request("/study/end-session", { method: "POST", body: JSON.stringify({ answered, correct }) }),
+
+  // Config / first-run setup
+  getConfig: () => request("/config/"),
+  setup: (materialsPath) =>
+    request("/config/setup", { method: "POST", body: JSON.stringify({ materials_path: materialsPath }) }),
+  reindex: () => request("/config/reindex", { method: "POST" }),
+  indexStatus: () => request("/config/index-status"),
+
+  // Chatbot
+  chat: (question, history = []) =>
+    request("/chat/", { method: "POST", body: JSON.stringify({ question, history }) }),
 };
