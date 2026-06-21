@@ -15,18 +15,25 @@ async function request(path, options = {}) {
 export const api = {
   // Decks
   getDecks: () => request("/decks/"),
+  getOverview: () => request("/decks/overview"),
   createDeck: (name, description = "") =>
     request("/decks/", { method: "POST", body: JSON.stringify({ name, description }) }),
+  renameDeck: (id, name) =>
+    request(`/decks/${id}/rename`, { method: "PUT", body: JSON.stringify({ name }) }),
   deleteDeck: (id) => request(`/decks/${id}`, { method: "DELETE" }),
 
   // Cards
   getCards: (deckId) => request(`/cards/deck/${deckId}`),
   getDueCards: (deckId) => request(`/cards/due/${deckId}`),
+  browseCards: (q = "", deckId = null) =>
+    request(`/cards/browse?q=${encodeURIComponent(q)}${deckId ? `&deck_id=${deckId}` : ""}`),
   createCard: (deckId, front, back, tags = "") =>
     request("/cards/", { method: "POST", body: JSON.stringify({ deck_id: deckId, front, back, tags }) }),
   updateCard: (cardId, deckId, front, back, tags) =>
     request(`/cards/${cardId}`, { method: "PUT", body: JSON.stringify({ deck_id: deckId, front, back, tags }) }),
   deleteCard: (id) => request(`/cards/${id}`, { method: "DELETE" }),
+  moveCards: (cardIds, targetDeckId) =>
+    request("/cards/move", { method: "POST", body: JSON.stringify({ card_ids: cardIds, target_deck_id: targetDeckId }) }),
 
   // Study
   rateCard: (cardId, rating) =>
@@ -35,6 +42,19 @@ export const api = {
     request("/study/ai-answer", { method: "POST", body: JSON.stringify({ card_id: cardId, user_answer: userAnswer }) }),
   endSession: (answered, correct) =>
     request("/study/end-session", { method: "POST", body: JSON.stringify({ answered, correct }) }),
+  todayStats: () => request("/study/today"),
+
+  // Import / export
+  importCsv: (deckName, file) => {
+    const form = new FormData();
+    form.append("deck", deckName);
+    form.append("file", file);
+    return fetch(`${BASE}/import/csv`, { method: "POST", body: form }).then(async (r) => {
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || "Import failed");
+      return r.json();
+    });
+  },
+  exportDeckUrl: (deckId) => `${BASE}/import/export/${deckId}`,
 
   // Config / first-run setup
   getConfig: () => request("/config/"),

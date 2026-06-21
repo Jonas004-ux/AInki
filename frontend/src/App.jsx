@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
-import Home from "./pages/Home";
-import DeckView from "./pages/DeckView";
+import TopNav from "./components/TopNav";
+import DeckOverview from "./pages/DeckOverview";
+import AddCard from "./pages/AddCard";
+import CardBrowser from "./pages/CardBrowser";
+import Stats from "./pages/Stats";
+import Sync from "./pages/Sync";
+import ImportCards from "./pages/ImportCards";
 import StudySession from "./pages/StudySession";
 import FirstRunSetup from "./components/FirstRunSetup";
 import ChatSidebar from "./components/ChatSidebar";
@@ -8,50 +13,68 @@ import { api } from "./api/client";
 import "./App.css";
 
 export default function App() {
-  const [screen, setScreen] = useState("home");
-  const [activeDeck, setActiveDeck] = useState(null);
-  const [studyMode, setStudyMode] = useState("classic");
-  const [firstRun, setFirstRun] = useState(null); // null=loading, true/false
+  const [tab, setTab] = useState("overview");
+  const [firstRun, setFirstRun] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [studyDeck, setStudyDeck] = useState(null);   // deck being studied
+  const [studyMode, setStudyMode] = useState(null);   // "classic" | "ai" | null
+  const [chooserDeck, setChooserDeck] = useState(null); // deck awaiting mode choice
 
   useEffect(() => {
-    api.getConfig()
-      .then((cfg) => setFirstRun(cfg.first_run))
-      .catch(() => setFirstRun(false)); // backend down → don't block the app
+    api.getConfig().then((c) => setFirstRun(c.first_run)).catch(() => setFirstRun(false));
   }, []);
-
-  function selectDeck(deck) {
-    setActiveDeck(deck);
-    setScreen("deck");
-  }
-
-  function startStudy(deck, mode) {
-    setActiveDeck(deck);
-    setStudyMode(mode);
-    setScreen("study");
-  }
 
   if (firstRun === null) {
     return <div className="page centered"><p className="muted">Loading…</p></div>;
   }
-
   if (firstRun) {
     return <FirstRunSetup onComplete={() => setFirstRun(false)} />;
   }
 
-  let body;
-  if (screen === "study") {
-    body = <StudySession deck={activeDeck} mode={studyMode} onBack={() => setScreen("deck")} />;
-  } else if (screen === "deck") {
-    body = <DeckView deck={activeDeck} onStudy={startStudy} onBack={() => setScreen("home")} />;
-  } else {
-    body = <Home onSelectDeck={selectDeck} />;
+  // Full-screen study session
+  if (studyDeck && studyMode) {
+    return (
+      <StudySession
+        deck={studyDeck}
+        mode={studyMode}
+        onBack={() => { setStudyDeck(null); setStudyMode(null); }}
+      />
+    );
   }
+
+  let body;
+  if (tab === "overview") body = <DeckOverview onStudyDeck={setChooserDeck} onImport={() => setTab("import")} />;
+  else if (tab === "add") body = <AddCard />;
+  else if (tab === "browse") body = <CardBrowser />;
+  else if (tab === "stats") body = <Stats />;
+  else if (tab === "sync") body = <Sync />;
+  else if (tab === "import") body = <ImportCards onDone={() => setTab("overview")} />;
 
   return (
     <div className={`app-shell ${chatOpen ? "chat-open" : ""}`}>
+      <TopNav active={tab === "import" ? "overview" : tab} onChange={setTab} />
       <div className="app-main">{body}</div>
       <ChatSidebar open={chatOpen} onToggle={() => setChatOpen((o) => !o)} />
+
+      {chooserDeck && (
+        <div className="modal-overlay" onClick={() => setChooserDeck(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Study “{chooserDeck.name}”</h3>
+            <p className="muted">Choose a mode:</p>
+            <div className="mode-choices">
+              <button onClick={() => { setStudyDeck(chooserDeck); setStudyMode("classic"); setChooserDeck(null); }}>
+                Classic
+                <span className="mode-sub">Flip & self-rate</span>
+              </button>
+              <button className="btn-ai" onClick={() => { setStudyDeck(chooserDeck); setStudyMode("ai"); setChooserDeck(null); }}>
+                AI Mode
+                <span className="mode-sub">Type your answer, AI grades it</span>
+              </button>
+            </div>
+            <button className="btn-ghost" onClick={() => setChooserDeck(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

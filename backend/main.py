@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, SessionLocal
 import models
-from routers import decks, cards, study, config_router, chat
+from routers import decks, cards, study, config_router, chat, import_router
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -29,6 +29,7 @@ app.include_router(cards.router)
 app.include_router(study.router)
 app.include_router(config_router.router)
 app.include_router(chat.router)
+app.include_router(import_router.router)
 
 
 def _seed_sample_deck():

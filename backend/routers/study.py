@@ -170,3 +170,16 @@ def end_session(payload: EndSessionRequest, db: Session = Depends(get_db)):
         },
     )
     return {"topics_updated": len(topic_stats)}
+
+
+@router.get("/today")
+def today_stats(db: Session = Depends(get_db)):
+    """Cards reviewed today (for the deck-overview footer line)."""
+    from datetime import datetime, timedelta
+    start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    count = (
+        db.query(models.Card)
+        .filter(models.Card.last_reviewed >= start)
+        .count()
+    )
+    return {"studied_today": count}
